@@ -1,0 +1,155 @@
+---
+title: "R Final Proje"
+author: "Eren Taşçı"
+format: 
+    html: default
+    pdf: default
+editor: visual
+---
+
+# 
+
+\# **İlçe Bazında Hanelerdeki Araç Sahiplik Durumu**
+
+```{r setup,message=FALSE, warning=FALSE}
+
+#Kütüphaneler
+library(readr)
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(Amelia)
+library(naniar)
+library(VIM)
+library(magrittr)
+
+#Veri Setini Akatarma
+veri<-read_excel("19-vdym-ilce-baznda-hanelerdeki-arac-sahiplii-durumu.xlsx")
+View(veri)
+```
+
+# *-Veri Analizi-*
+
+\# **Verimizde 39 satır 15 sütun olduğu görülüyor.**
+
+```{r}
+dim(veri)
+```
+
+**\# Summary fonksiyonu ile bütün değişkenlerin istatistiksel özetini elde ettim. Bu özet, her bir değişkenin minimum, maksimum, ortalama, medyan ve çeyreklikler gibi temel istatistiksel değerlerini barındırıyor.**
+
+```{r}
+summary(veri)
+```
+
+**\# Doğrusal regresyon analizi yapmak için lm() fonksiyonunu kullandım ve elde ettiğim sonuçlara göre İş yeri tarafından sağlanan araç olmayınca, özel otombil araç sahipliği arasında doğrusal bir ilişkinin olduğunu söyleyebilirim.**
+
+```{r}
+lm(`isyeri tarafindan saglanan arac Yok` ~ `ozel otomobil Arac Var` , data = veri) 
+
+```
+
+**\# Summary(lm) fonksiyonunu kullanarak iş yeri tarafından sağlanan araç ve özel otomobil sahipliği arasındaki ilişkinin anlamlılığını F testi ile değerlendirdim ve bu ilişkinin anlamlı olduğunu söyleyebilirim.**
+
+```{r}
+summary(lm(`isyeri tarafindan saglanan arac Yok` ~ `ozel otomobil Arac Var` , data = veri))
+```
+
+**\# İş yeri tarafından sağlanan araç ve özel otomobil sahipliği arasındaki ilişkinin dağılım Nokta grafiği aşağıda çizdirdim.**
+
+```{r}
+grafik =ggplot(veri,aes(`isyeri tarafindan saglanan arac Yok`,`ozel otomobil Arac Var`))
+grafik + geom_point()
+```
+
+**\# any(is.na()) fonksiyonun FALSE vermesi , veri de Boş Gözlem bulunmadğı anlamına geliyor.**
+
+```{r}
+any(is.na(veri))
+
+```
+
+**\# Amelia ,naniar ve VIM paketleri ile birlikte missmap ,vis_miss ve matrixplot** **fonksiyonlari kullanılarak, veri setinde herhangi bir boş gözlemin olmadığını net bir şekilde görülebilir.**
+
+```{r}
+Amelia::missmap(veri)
+```
+
+```{r}
+vis_miss(veri)
+```
+
+```{r}
+VIM::matrixplot(veri)
+```
+
+\# -**Rastgele Gözlem Silme**-
+
+**\# veri setinin her sütununa (ilk sütün hariç) verinin yüzde 10 una denk gelecek şeklide rastgele veriler silindi.**
+
+```{r}
+yuzde <- 0.10
+for(column in names(veri)[-1]) {
+  na_count <- floor(yuzde * nrow(veri))
+  na_indices <- sample(1:nrow(veri), na_count)
+  veri[na_indices, column] <- NA
+}
+```
+
+**\# missmap ,vis_miss ve matrixplot** **fonksiyonlar ile veri setine sine boş gözlemler(NA) değeri atandığını görülebilir.**
+
+```{r}
+any(is.na(veri))
+Amelia::missmap(veri)
+```
+
+```{r}
+vis_miss(veri)
+```
+
+```{r}
+vis_miss(veri)
+```
+
+**\
+\# Boş gözlem ataması sonrası iş yeri tarafından sağlanan araç yok ile özel otomobil araç var Karşılaştırılması:**
+
+```{r}
+marginplot(veri[,c("isyeri tarafindan saglanan arac Yok","ozel otomobil Arac Var")])
+
+```
+
+**\# Her sütündaki Toplam NA değerleri**
+
+```{r}
+veri %>% is.na() %>% colSums()
+```
+
+\# -**Boş Gözlem Doldurma-**
+
+```{r}
+for(col in names(veri)) {
+  if(is.numeric(veri[[col]])) {
+    column_mean <- mean(veri[[col]], na.rm = TRUE)
+    
+    veri[[col]] <- ifelse(is.na(veri[[col]]), column_mean, veri[[col]])
+  }
+}
+```
+
+**\# Son olarak da tekrar Amelia ,naniar ve VIM paketleri ile birlikte missmap ,vis_miss ve matrixplot** **fonksiyonlari kullanılarak Boş gözlemlerin dolduğunu görebiliyoruz.**
+
+```{r}
+any(is.na(veri))
+Amelia::missmap(veri)
+```
+
+```{r}
+vis_miss(veri)
+```
+
+\
+
+```{r}
+VIM::matrixplot(veri)
+```
